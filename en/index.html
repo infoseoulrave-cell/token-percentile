@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What percentile is my AI token usage? — Claude Code & Codex</title>
+<meta name="description" content="Measure your real Claude Code and Codex token usage from local logs and see what percentile you're in. Your log files never leave the browser.">
+<link rel="canonical" href="https://token-percentile.vercel.app/en/">
+<link rel="alternate" hreflang="ko" href="https://token-percentile.vercel.app/">
+<link rel="alternate" hreflang="en" href="https://token-percentile.vercel.app/en/">
+<link rel="alternate" hreflang="x-default" href="https://token-percentile.vercel.app/en/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0e0f11">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Token Percentile">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://token-percentile.vercel.app/en/">
+<meta property="og:title" content="What percentile is my AI token usage?">
+<meta property="og:description" content="Measure your Claude Code and Codex token usage from local logs and compare with other users. Logs never leave your browser.">
+<meta property="og:image" content="https://token-percentile.vercel.app/og-en.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="What percentile is my AI token usage? — measured from Claude Code and Codex logs">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="What percentile is my AI token usage?">
+<meta name="twitter:description" content="Measure your Claude Code and Codex token usage from local logs and compare with other users.">
+<meta name="twitter:image" content="https://token-percentile.vercel.app/og-en.png">
+<style>
+  :root{
+    --bg:#0e0f11; --panel:#161719; --line:#2a2c30; --text:#f0efec; --dim:#9a9a94; --muted:#6f6f6a;
+    --accent:#d97757; --claude:#d95926; --codex:#3987e5; --all:#9085e9;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  main{max-width:760px;margin:0 auto;padding:56px 20px 96px}
+  h1{font-size:30px;letter-spacing:-.025em;margin:0 0 8px}
+  h2{font-size:18px;margin:0 0 4px;letter-spacing:-.01em}
+  h3{font-size:14px;margin:0 0 10px;color:var(--dim);font-weight:600}
+  p{line-height:1.65}
+  .sub{color:var(--dim);margin:0 0 32px;font-size:15.5px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:16px}
+  .badge{display:inline-block;font-size:12px;color:var(--dim);border:1px solid var(--line);border-radius:99px;padding:3px 10px;margin:6px 0 16px}
+  .seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{background:none;border:0;color:var(--dim);font:inherit;font-size:13.5px;padding:6px 12px;border-radius:7px;cursor:pointer}
+  .seg button.on{background:var(--line);color:var(--text)}
+  ol{padding-left:20px;margin:12px 0 18px;color:var(--dim);font-size:14px;line-height:1.8}
+  code,kbd{background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--text);font-family:ui-monospace,Consolas,monospace}
+  .btns{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px 16px;font:inherit;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+  .btn:hover{border-color:var(--dim)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#1a0f0a;font-weight:700}
+  .btn:disabled{opacity:.45;cursor:default}
+  .drop{margin-top:12px;border:1.5px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--muted);font-size:14px}
+  .drop.over{border-color:var(--accent);color:var(--text)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0;align-items:center;min-height:8px}
+  .chip{background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-size:13px}
+  .link{background:none;border:0;color:var(--dim);text-decoration:underline;cursor:pointer;font:inherit;font-size:13px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:0}
+  .dot.claude{background:var(--claude)} .dot.codex{background:var(--codex)}
+  .progress{height:6px;background:var(--bg);border-radius:99px;overflow:hidden;margin-top:14px}
+  .progress div{height:100%;width:0;background:var(--accent);transition:width .15s}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:12px;line-height:1.6}
+  .muted{color:var(--muted)} .err{color:#e66767} .accent{color:var(--accent)}
+  .rank{text-align:center;padding:12px 0 4px}
+  .big{font-size:68px;font-weight:800;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+  .big small{font-size:28px;font-weight:700;color:var(--dim);margin:0 4px}
+  .big .pct{color:var(--accent)}
+  .caption{color:var(--dim);margin-top:12px;font-size:15px;line-height:1.6}
+  .caption b{color:var(--text)} .caption.small{font-size:13px;color:var(--muted);margin-top:6px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .kl{font-size:12.5px;color:var(--dim)} .kv{font-size:24px;font-weight:700;margin:6px 0 4px;font-variant-numeric:tabular-nums} .ks{font-size:11.5px;color:var(--muted);line-height:1.5}
+  .head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .legend{display:flex;gap:14px;font-size:13px;color:var(--dim)}
+  svg.chart{display:block;width:100%;height:auto;margin-top:8px}
+  svg .grid{stroke:var(--line);stroke-width:1} svg .base{stroke:var(--muted);stroke-width:1}
+  svg .axis{fill:var(--muted);font-size:11px}
+  svg .s-claude{fill:var(--claude)} svg .s-codex{fill:var(--codex)} svg .s-all{fill:var(--all)}
+  .tables{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+  td,th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  td:first-child,th:first-child{text-align:left;white-space:normal;word-break:break-all}
+  th{color:var(--muted);font-weight:500}
+  details{margin-top:14px;font-size:13.5px;color:var(--dim);line-height:1.7}
+  summary{cursor:pointer;color:var(--dim)}
+  details table{margin-top:8px;font-size:12.5px}
+  pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12px;overflow:auto;color:var(--dim)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  input[type=text]{flex:1;min-width:180px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px 14px;font-size:17px;outline:none}
+  input[type=text]:focus{border-color:var(--accent)}
+  input[type=number]{width:80px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:5px 8px;font:inherit}
+  #quickOut{margin-top:14px;line-height:1.7}
+  .notes ul{padding-left:18px} .notes a{color:var(--accent)}
+  .tip{position:fixed;pointer-events:none;background:#232427;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px;line-height:1.6;color:var(--text);z-index:10;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .plan{font-size:13px;color:var(--dim);margin-top:10px}
+  .share{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px;align-items:center}
+  .share .btn{font-size:13.5px;padding:8px 12px}
+  .share.left{justify-content:flex-start;margin-top:10px}
+  .shareMsg{font-size:12.5px;color:var(--muted)}
+  .shared{border-color:var(--accent)}
+  .shared .big{font-size:44px}
+  .lang{float:right;font-size:13px;color:var(--dim);text-decoration:none;border:1px solid var(--line);border-radius:99px;padding:4px 12px;margin-top:6px}
+  .lang:hover{border-color:var(--dim)}
+  footer{margin-top:28px;font-size:13px;color:var(--muted)} footer a{color:var(--dim)}
+  @media (max-width:640px){ .kpis{grid-template-columns:1fr 1fr} .tables{grid-template-columns:1fr} .big{font-size:54px} }
+</style>
+</head>
+<body>
+<main>
+  <a class="lang" href="/" hreflang="ko" lang="ko">한국어</a>
+  <h1>What percentile is my AI token usage?</h1>
+  <p class="sub">Measure your real usage from the logs Claude Code and Codex leave on your machine, and compare it with other users.</p>
+  <section class="card shared" id="shared" hidden></section>
+
+  <section class="card" id="measure">
+    <h2>Measure from your logs</h2>
+    <span class="badge">🔒 Log files never leave this browser · last 30 days only</span>
+    <div class="seg" id="os" role="group" aria-label="Operating system"><button type="button" data-os="win">Windows</button><button type="button" data-os="mac">Mac</button></div>
+    <ol id="howto"></ol>
+    <div class="btns">
+      <button class="btn" type="button" id="pickClaude"><i class="dot claude"></i>Choose Claude Code folder</button>
+      <button class="btn" type="button" id="pickCodex"><i class="dot codex"></i>Choose Codex folder</button>
+      <input type="file" id="inClaude" webkitdirectory multiple hidden>
+      <input type="file" id="inCodex" webkitdirectory multiple hidden>
+    </div>
+    <div class="drop" id="drop">or drag your <b>.claude</b> / <b>.codex</b> folder here</div>
+    <div class="chips" id="chips"></div>
+    <button class="btn primary" type="button" id="analyze" disabled>Analyze</button>
+    <div class="progress" id="progress" hidden><div id="bar"></div></div>
+    <p class="hint">Your browser will show an “upload” confirmation when you pick a folder, but nothing is sent anywhere — the files are read inside this tab only. Close the tab when you're done.</p>
+  </section>
+
+  <section id="report" hidden>
+    <div class="card rank" id="rank" aria-live="polite"></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="card" id="dayWrap">
+      <div class="head"><h3 id="dayTitle">Tokens per day</h3><div class="legend" id="dayLegend"></div></div>
+      <svg class="chart" id="dayChart" role="img" aria-label="Bar chart of tokens per day, last 30 days"></svg>
+      <details><summary>Show as table</summary><table id="dayTable"></table></details>
+      <div class="plan" id="plan"></div>
+    </div>
+    <div class="tables card" id="tables">
+      <div><h3>By model</h3><table id="models"></table></div>
+      <div><h3>By project <span class="muted" style="font-weight:400">(shown on this screen only)</span></h3><table id="projects"></table></div>
+    </div>
+    <div class="card" id="hourWrap">
+      <h3>Tokens by hour of day</h3>
+      <svg class="chart" id="hourChart" role="img" aria-label="Bar chart of tokens by hour of day"></svg>
+    </div>
+    <div class="card" id="submitCard">
+      <h2>Add your numbers to the measured ranking</h2>
+      <p class="muted" style="font-size:14px;margin:6px 0 12px">The more people contribute, the more the percentile becomes a measurement instead of an estimate. Only the numbers below are sent — no project names, model names or conversation content. Sending again from the same browser updates your entry.</p>
+      <pre id="payload"></pre>
+      <div class="row"><button class="btn primary" type="button" id="submit">Send these numbers</button><span id="submitMsg" class="muted" style="font-size:13.5px"></span></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Quick estimate</h2>
+    <p class="muted" style="font-size:14px;margin:6px 0 14px">Can't open your logs? Type your usage. <span id="poolSize"></span></p>
+    <div class="row">
+      <input id="tokens" type="text" placeholder="e.g. 30M, 1.2B, 500K" autocomplete="off" aria-label="Token usage">
+      <div class="seg" id="period" role="group" aria-label="Period"><button type="button" data-p="day" class="on">per day</button><button type="button" data-p="month">per month</button></div>
+    </div>
+    <div id="quickOut"></div>
+  </section>
+
+  <details class="notes">
+    <summary>Method and limitations</summary>
+    <ul>
+      <li><b>What is counted</b>: for Claude Code, the sum of input, cache-write, cache-read and output tokens recorded for each response (a response written as several lines is counted once); for Codex, per-response usage records (older logs: increments of the cumulative counter). Last 30 days including today; only days with usage count as active days.</li>
+      <li><b>Measured rank</b>: your position among people who anonymously contributed their numbers here. They are self-selected, so the pool may skew toward heavy users, and edited logs can't be ruled out. The sample size (n) is always shown.</li>
+      <li><b>Estimated rank</b>: a log-normal fit to the enterprise-developer figures in Anthropic's docs (about $13 per active day on average, 90% under $30, <a href="https://code.claude.com/docs/en/costs" target="_blank" rel="noopener">source</a>; median ≈ $5.7/day), converted at $<input id="rate" type="number" step="0.05" min="0.01" value="0.55"> per 1M tokens (based on the <code>/usage</code> example in the same doc, mostly cache reads). Monthly input is divided by 15 active days. Codex users are outside those figures, so treat it as a rough reference.</li>
+      <li><b>What is sent</b>: 30-day total tokens, active days, per-tool totals, cache and output ratios, the Codex plan name, and a random ID generated for your browser. This site's database does not store IP addresses; for abuse prevention it keeps only a hash that changes daily, for two days (the hosting provider's normal access logs are separate). Rankings publish only quantiles with the top and bottom 1% trimmed, and submissions are deleted after 180 days.</li>
+    </ul>
+  </details>
+  <footer>Source code: <a href="https://github.com/infoseoulrave-cell/token-percentile" target="_blank" rel="noopener">GitHub</a> — verify for yourself that your logs never leave the browser.</footer>
+</main>
+<div class="tip" id="tip" hidden></div>
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

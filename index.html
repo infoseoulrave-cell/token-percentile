@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>토큰 상위 몇 %?</title>
+<meta name="description" content="Claude Code·Codex 로그로 내 AI 토큰 사용량을 실측하고, 상위 몇 %인지 확인하세요. 로그 파일은 브라우저 밖으로 나가지 않습니다.">
+<link rel="canonical" href="https://token-percentile.vercel.app/">
+<link rel="alternate" hreflang="ko" href="https://token-percentile.vercel.app/">
+<link rel="alternate" hreflang="en" href="https://token-percentile.vercel.app/en/">
+<link rel="alternate" hreflang="x-default" href="https://token-percentile.vercel.app/en/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0e0f11">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="토큰 상위 몇 %?">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:url" content="https://token-percentile.vercel.app/">
+<meta property="og:title" content="나는 AI 토큰을 상위 몇 % 쓸까?">
+<meta property="og:description" content="Claude Code·Codex 로그로 내 토큰 사용량을 실측하고 다른 사용자와 비교해 보세요. 로그는 브라우저 밖으로 나가지 않아요.">
+<meta property="og:image" content="https://token-percentile.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="나는 AI 토큰을 상위 몇 % 쓸까? — Claude Code · Codex 로그로 실측">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="나는 AI 토큰을 상위 몇 % 쓸까?">
+<meta name="twitter:description" content="Claude Code·Codex 로그로 내 토큰 사용량을 실측하고 다른 사용자와 비교해 보세요.">
+<meta name="twitter:image" content="https://token-percentile.vercel.app/og.png">
+<style>
+  :root{
+    --bg:#0e0f11; --panel:#161719; --line:#2a2c30; --text:#f0efec; --dim:#9a9a94; --muted:#6f6f6a;
+    --accent:#d97757; --claude:#d95926; --codex:#3987e5; --all:#9085e9;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  main{max-width:760px;margin:0 auto;padding:56px 20px 96px}
+  h1{font-size:30px;letter-spacing:-.025em;margin:0 0 8px}
+  h2{font-size:18px;margin:0 0 4px;letter-spacing:-.01em}
+  h3{font-size:14px;margin:0 0 10px;color:var(--dim);font-weight:600}
+  p{line-height:1.65}
+  .sub{color:var(--dim);margin:0 0 32px;font-size:15.5px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:16px}
+  .badge{display:inline-block;font-size:12px;color:var(--dim);border:1px solid var(--line);border-radius:99px;padding:3px 10px;margin:6px 0 16px}
+  .seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{background:none;border:0;color:var(--dim);font:inherit;font-size:13.5px;padding:6px 12px;border-radius:7px;cursor:pointer}
+  .seg button.on{background:var(--line);color:var(--text)}
+  ol{padding-left:20px;margin:12px 0 18px;color:var(--dim);font-size:14px;line-height:1.8}
+  code,kbd{background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--text);font-family:ui-monospace,Consolas,monospace}
+  .btns{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px 16px;font:inherit;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+  .btn:hover{border-color:var(--dim)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#1a0f0a;font-weight:700}
+  .btn:disabled{opacity:.45;cursor:default}
+  .drop{margin-top:12px;border:1.5px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--muted);font-size:14px}
+  .drop.over{border-color:var(--accent);color:var(--text)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0;align-items:center;min-height:8px}
+  .chip{background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-size:13px}
+  .link{background:none;border:0;color:var(--dim);text-decoration:underline;cursor:pointer;font:inherit;font-size:13px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:0}
+  .dot.claude{background:var(--claude)} .dot.codex{background:var(--codex)}
+  .progress{height:6px;background:var(--bg);border-radius:99px;overflow:hidden;margin-top:14px}
+  .progress div{height:100%;width:0;background:var(--accent);transition:width .15s}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:12px;line-height:1.6}
+  .muted{color:var(--muted)} .err{color:#e66767} .accent{color:var(--accent)}
+  .rank{text-align:center;padding:12px 0 4px}
+  .big{font-size:68px;font-weight:800;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+  .big small{font-size:28px;font-weight:700;color:var(--dim);margin:0 4px}
+  .big .pct{color:var(--accent)}
+  .caption{color:var(--dim);margin-top:12px;font-size:15px;line-height:1.6}
+  .caption b{color:var(--text)} .caption.small{font-size:13px;color:var(--muted);margin-top:6px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .kl{font-size:12.5px;color:var(--dim)} .kv{font-size:24px;font-weight:700;margin:6px 0 4px;font-variant-numeric:tabular-nums} .ks{font-size:11.5px;color:var(--muted);line-height:1.5}
+  .head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .legend{display:flex;gap:14px;font-size:13px;color:var(--dim)}
+  svg.chart{display:block;width:100%;height:auto;margin-top:8px}
+  svg .grid{stroke:var(--line);stroke-width:1} svg .base{stroke:var(--muted);stroke-width:1}
+  svg .axis{fill:var(--muted);font-size:11px}
+  svg .s-claude{fill:var(--claude)} svg .s-codex{fill:var(--codex)} svg .s-all{fill:var(--all)}
+  .tables{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+  td,th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  td:first-child,th:first-child{text-align:left;white-space:normal;word-break:break-all}
+  th{color:var(--muted);font-weight:500}
+  details{margin-top:14px;font-size:13.5px;color:var(--dim);line-height:1.7}
+  summary{cursor:pointer;color:var(--dim)}
+  details table{margin-top:8px;font-size:12.5px}
+  pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12px;overflow:auto;color:var(--dim)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  input[type=text]{flex:1;min-width:180px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px 14px;font-size:17px;outline:none}
+  input[type=text]:focus{border-color:var(--accent)}
+  input[type=number]{width:80px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:5px 8px;font:inherit}
+  #quickOut{margin-top:14px;line-height:1.7}
+  .notes ul{padding-left:18px} .notes a{color:var(--accent)}
+  .tip{position:fixed;pointer-events:none;background:#232427;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px;line-height:1.6;color:var(--text);z-index:10;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .plan{font-size:13px;color:var(--dim);margin-top:10px}
+  .share{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px;align-items:center}
+  .share .btn{font-size:13.5px;padding:8px 12px}
+  .share.left{justify-content:flex-start;margin-top:10px}
+  .shareMsg{font-size:12.5px;color:var(--muted)}
+  .shared{border-color:var(--accent)}
+  .shared .big{font-size:44px}
+  .lang{float:right;font-size:13px;color:var(--dim);text-decoration:none;border:1px solid var(--line);border-radius:99px;padding:4px 12px;margin-top:6px}
+  .lang:hover{border-color:var(--dim)}
+  footer{margin-top:28px;font-size:13px;color:var(--muted)} footer a{color:var(--dim)}
+  @media (max-width:640px){ .kpis{grid-template-columns:1fr 1fr} .tables{grid-template-columns:1fr} .big{font-size:54px} }
+</style>
+</head>
+<body>
+<main>
+  <a class="lang" href="/en/" hreflang="en" lang="en">English</a>
+  <h1>나는 AI 토큰을 상위 몇 % 쓸까?</h1>
+  <p class="sub">Claude Code · Codex가 내 컴퓨터에 남긴 로그로 실제 사용량을 재고, 다른 사용자들과 비교해 드려요.</p>
+  <section class="card shared" id="shared" hidden></section>
+
+  <section class="card" id="measure">
+    <h2>내 로그로 정확하게 재기</h2>
+    <span class="badge">🔒 로그 파일은 이 브라우저 밖으로 나가지 않아요 · 최근 30일만 계산</span>
+    <div class="seg" id="os" role="group" aria-label="운영체제"><button type="button" data-os="win">Windows</button><button type="button" data-os="mac">Mac</button></div>
+    <ol id="howto"></ol>
+    <div class="btns">
+      <button class="btn" type="button" id="pickClaude"><i class="dot claude"></i>Claude Code 폴더 선택</button>
+      <button class="btn" type="button" id="pickCodex"><i class="dot codex"></i>Codex 폴더 선택</button>
+      <input type="file" id="inClaude" webkitdirectory multiple hidden>
+      <input type="file" id="inCodex" webkitdirectory multiple hidden>
+    </div>
+    <div class="drop" id="drop">또는 <b>.claude</b> · <b>.codex</b> 폴더를 여기에 끌어다 놓기</div>
+    <div class="chips" id="chips"></div>
+    <button class="btn primary" type="button" id="analyze" disabled>분석하기</button>
+    <div class="progress" id="progress" hidden><div id="bar"></div></div>
+    <p class="hint">폴더를 고르면 브라우저가 “업로드” 확인 창을 띄우지만, 실제로는 어디로도 전송되지 않고 이 탭 안에서만 읽어요. 다 쓴 뒤 탭을 닫으면 끝이에요.</p>
+  </section>
+
+  <section id="report" hidden>
+    <div class="card rank" id="rank" aria-live="polite"></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="card" id="dayWrap">
+      <div class="head"><h3 id="dayTitle">일별 토큰</h3><div class="legend" id="dayLegend"></div></div>
+      <svg class="chart" id="dayChart" role="img" aria-label="최근 30일 일별 토큰 막대 차트"></svg>
+      <details><summary>표로 보기</summary><table id="dayTable"></table></details>
+      <div class="plan" id="plan"></div>
+    </div>
+    <div class="tables card" id="tables">
+      <div><h3>모델별</h3><table id="models"></table></div>
+      <div><h3>프로젝트별 <span class="muted" style="font-weight:400">(이 화면에만 표시)</span></h3><table id="projects"></table></div>
+    </div>
+    <div class="card" id="hourWrap">
+      <h3>시간대별 토큰</h3>
+      <svg class="chart" id="hourChart" role="img" aria-label="시간대별 토큰 막대 차트"></svg>
+    </div>
+    <div class="card" id="submitCard">
+      <h2>익명으로 실측 순위에 보태기</h2>
+      <p class="muted" style="font-size:14px;margin:6px 0 12px">더 많은 사람이 보탤수록 “상위 몇 %”가 추정이 아닌 실측이 돼요. 아래 숫자만 전송되고, 프로젝트명·모델명·대화 내용은 보내지 않아요. 같은 브라우저에서 다시 보내면 기존 값이 갱신돼요.</p>
+      <pre id="payload"></pre>
+      <div class="row"><button class="btn primary" type="button" id="submit">이 숫자 보내기</button><span id="submitMsg" class="muted" style="font-size:13.5px"></span></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>숫자로 빠르게 계산</h2>
+    <p class="muted" style="font-size:14px;margin:6px 0 14px">로그를 열기 어렵다면 사용량을 직접 입력하세요. <span id="poolSize"></span></p>
+    <div class="row">
+      <input id="tokens" type="text" placeholder="예: 3000만, 1.2억, 50M" autocomplete="off" aria-label="토큰 사용량">
+      <div class="seg" id="period" role="group" aria-label="기간"><button type="button" data-p="day" class="on">하루</button><button type="button" data-p="month">한 달</button></div>
+    </div>
+    <div id="quickOut"></div>
+  </section>
+
+  <details class="notes">
+    <summary>계산 근거와 한계</summary>
+    <ul>
+      <li><b>무엇을 세나</b>: Claude Code는 응답마다 기록되는 입력·캐시 쓰기·캐시 읽기·출력 토큰의 합(같은 응답이 여러 줄로 기록되면 한 번만), Codex는 응답별 사용량 기록(구버전 로그는 누적 카운터의 증가분). 최근 30일(오늘 포함), 사용 기록이 있는 날만 활동일로 셉니다.</li>
+      <li><b>실측 순위</b>: 이 사이트에 익명으로 숫자를 보탠 사람들 사이의 순위입니다. 스스로 찾아와 제출한 사람들이라 헤비 유저 쪽으로 치우칠 수 있고, 로그를 고쳐서 내는 것까지 막을 수는 없어요. 표본 수(n)를 항상 함께 보여 드려요.</li>
+      <li><b>추정 순위</b>: Anthropic 문서의 기업 개발자 통계(활동일 평균 약 $13, 90%가 $30 미만, <a href="https://code.claude.com/docs/en/costs" target="_blank" rel="noopener">출처</a>)에 로그정규분포를 맞추고(중앙값 ≈ $5.7/일), 100만 토큰당 $<input id="rate" type="number" step="0.05" min="0.01" value="0.55">로 환산한 값입니다(같은 문서의 <code>/usage</code> 예시 기준, 캐시 읽기 위주). 한 달 입력은 15 활동일로 나눕니다. Codex 사용자는 이 통계의 대상이 아니라 참고용이에요.</li>
+      <li><b>보내는 것</b>: 30일 총 토큰, 활동일 수, 도구별 합계, 캐시·출력 비율, Codex 요금제 이름, 브라우저마다 무작위로 만든 ID. 이 사이트 DB에는 IP 주소를 저장하지 않고, 남용 방지를 위해 하루 단위로 바뀌는 해시만 이틀간 보관합니다(호스팅 업체의 일반 접속 기록은 별도). 순위 계산은 상·하위 1%를 잘라낸 분위값만 공개하고, 제출 기록은 180일 뒤 지웁니다.</li>
+    </ul>
+  </details>
+  <footer>소스 코드: <a href="https://github.com/infoseoulrave-cell/token-percentile" target="_blank" rel="noopener">GitHub</a> — 로그가 서버로 안 나간다는 걸 코드로 직접 확인할 수 있어요.</footer>
+</main>
+<div class="tip" id="tip" hidden></div>
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

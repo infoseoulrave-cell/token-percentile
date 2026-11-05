@@ -1,0 +1,6 @@
+.vercel
+.env*
+node_modules/
+DEVLOG.md
+LAUNCH.md
+graphify-out/

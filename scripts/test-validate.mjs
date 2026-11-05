@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { validateSubmission } from '../api/_validate.js';
+const ok = { v:1, clientId:'3f1c2b9e-8a4d-4c2e-9b1a-0d2e3f4a5b6c', windowDays:30, activeDays:29, total:4680500000, avgDaily:Math.round(4680500000/29), claudeTotal:4523700000, codexTotal:156800000, cacheRatio:0.975, outputRatio:0.0035, codexPlan:'pro' };
+assert.ok(validateSubmission(ok).value);
+const bad = (patch, why) => { const r = validateSubmission({ ...ok, ...patch }); assert.ok(r.error, 'should reject: ' + why); };
+bad({ v:2 }, 'version'); bad({ clientId:'x' }, 'uuid'); bad({ activeDays:0 }, 'days 0'); bad({ activeDays:31 }, 'days 31');
+bad({ total:1e13, claudeTotal:1e13-156800000 }, 'too big'); bad({ claudeTotal:1 }, 'sum mismatch'); bad({ avgDaily:5 }, 'avg mismatch');
+bad({ cacheRatio:1.5 }, 'ratio'); bad({ codexPlan:'<script>' }, 'plan chars'); bad({ codexPlan:'pro', codexTotal:0, claudeTotal:4680500000 }, 'plan w/o codex');
+bad({ total:4680500000.5 }, 'float'); assert.ok(validateSubmission(null).error); assert.ok(validateSubmission([1]).error);
+assert.ok(validateSubmission({ ...ok, codexPlan:null }).value);
+console.log('validate: all assertions passed');
